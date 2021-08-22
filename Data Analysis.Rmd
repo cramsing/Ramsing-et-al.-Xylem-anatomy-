@@ -1,0 +1,1710 @@
+---
+title: "Data Analysis"
+author: "Charis"
+output:
+  pdf_document: default
+  html_document: default
+---
+# Materials and Methods 
+
+_Within Variables_
+Statistical analyses were run within each variable, both independent and dependent, to test if there were significant differences between rootstocks. The distribution of the data was right skewed and justified the use of the Kruskal-Wallis test for all variables except xylem density. Following Kruskall-Wallis tests, Dunn’s test and Pairwise Mann-Whitney tests were run as post-hoc tests. For xylem density, one-way ANOVA was used followed by a post-hoc Tukey’s HSD test. 
+
+_Classes_
+The imbalance between the number of replicates per sample used for the independent and dependent variables made it impossible to directly compare between the two. Whereas four replicates per rootstock were used for the histological data (independent variables), anywhere from four to 16 replicates per rootstock were used for the DNA concentration (dependent variable). In order to mitigate this issue, the independent variables were sorted into classes to convert them from quantitative variables into qualitative factors. Five classes were established for each independent variable (diameter, density, and surface) and assigned as shown in supplementary table 1. 
+
+A three-way ANOVA would have been an ideal test to measure the combined influences of histological classes on DNA concentration, but the data was right skewed and transformations ineffective. As such, separate Kruskal-Wallis tests were run for histological variable DNA concentration combination. These were followed by Dunn’s test and the Pairwise Mann-Whitney test. The “agricolae” package was used to identify Kruskal-Wallis groups as seen in Tables 1-5. 
+
+_Correlation_
+To investigate potential correlation between histological traits, the Kendall rank correlation test was run and plotted (Figures 3-5) using the “ggpubr” package. 
+
+All data analysis was run in R studio version 1.3.959. Essential packages include “ARTool,” “dplyr,” “FSA,” “ggplot2,” “grDevices” and those mentioned above.
+
+
+
+# Data Introduction 
+
+The _independent variables_ are grapevine xylem histological characteristics:
+
+1. _diameter_ : diameter of xylem vessels (μm)
+2. _density_ : density of xylem vessels (nº vessels/mm^2) 
+3. _surface_ : Proportion of stem surface area covered in xylem
+vessels (mm2 xylem/total mm2 surface area)
+
+The _dependent variables_ are :
+
+1. _fungal incidence_ measured as #of infected samples/# total analyzed samples and was calculated for both *Pa. chlamydospora* and *Pm. minimum*, but will not be treated in this analysis. 
+
+2. _fungal DNA concentration_ measured as DNA concentration in (pg/uL) samples for each *Pa. chlamydospora* and *Pm. minimum*
+
+Note : from here on *Pa. chlamydospora* and *Pm. minimum* will be referred to as Pch and Pmin for facility. 
+
+# Data Prep
+
+The data had to be reorganized everything to fit in the same excel file - "internshipanalysis.xlsx" and used this for all future analysis.
+This was necessary as many rootstock names varied for each variable (ie. a rootstock was named "110 RICHTER" in the Pch Incidence file but "RICHTER 110" in the histological data files). Before I could do anything meaningful I had to fix this issue and reorganize the data. 
+
+Data import and package installation
+```{r data import and packages, warning = FALSE, message = FALSE, results = 'hide'}
+# raw data with everything together
+library(readxl)
+PchPres <- read_excel("internshipanalysis.xlsx", sheet = "Pch incidence")
+PminInc <- read_excel("internshipanalysis.xlsx", sheet = "Pmin incidence")
+PchConc <- read_excel("internshipanalysis.xlsx", sheet = "Pch conc")
+PminConc <- read_excel("internshipanalysis.xlsx", sheet = "Pmin conc")
+hist <- read_excel("internshipanalysis.xlsx", sheet = "histological data")
+hist.avrgs <- read_excel("internshipanalysis.xlsx", sheet = "hist.avrgs")
+charact <- read_excel("internshipanalysis.xlsx", sheet = "rootstock.characteristics")
+
+# Packages
+#install.packages("ggpubr")
+# install.packages("ggplot2")
+# install.packages("dplyr")
+# install.packages("grDevices")
+# install.packages("ARTool")
+# install.packages("agricolae")
+# install.packages("FSA")
+# install.packages("devtools")
+##ggbiplot install (from github so slightly different)
+# library(devtools)
+# install_github("vqv/ggbiplot")
+```
+
+Quick data prep
+```{r data prep, warning = FALSE, message = FALSE, results = 'hide'}
+#* Pch Conc ####
+#PchConc clean up by averages
+library(dplyr)
+PchMeanConc <- PchConc %>%
+  group_by(rootstock) %>%
+  summarise(PchMeanConc = mean(Conc_pg.ul))
+PchConc <- dplyr::left_join(PchConc, PchMeanConc, by = "rootstock")
+#standard error
+standard_error <- function(x) sd(x) / sqrt(length(x))
+PchConcError <- PchConc %>%
+  group_by(rootstock) %>%
+  summarise(PchConcError = standard_error(Conc_pg.ul))
+# join standard error and averages by rootstock
+PchConc <- dplyr::left_join(PchConc, PchConcError, by = "rootstock")
+PchMeanConc <- dplyr::left_join(PchMeanConc, PchConcError, by = "rootstock")
+# remove superfluous columns 
+PchConc$Code <- NULL
+PchConc$Plant <- NULL
+PchConc$Sampling <- NULL
+PchConc$Conc_ug.ul <- NULL
+
+#* Pmin Conc####
+#Pmin Conc clean up by averages
+library(dplyr)
+PminMeanConc <- PminConc %>%
+  group_by(rootstock) %>%
+  summarise(PminMeanConc = mean(Conc_pg.ul))
+PminConc <- dplyr::left_join(PminConc, PminMeanConc, by = "rootstock")
+#standard error
+#std.error function
+standard_error <- function(x) sd(x) / sqrt(length(x))
+PminConcError <- PminConc %>%
+  group_by(rootstock) %>%
+  summarise(PminConcError = standard_error(Conc_pg.ul))
+# join standard error and averages by rootstock
+PminConc <- dplyr::left_join(PminConc, PminConcError, by = "rootstock")
+PminMeanConc <- dplyr::left_join(PminMeanConc, PminConcError, by = "rootstock")
+# remove superfluous columns
+PminConc$Code <- NULL
+PminConc$Plant <- NULL
+PminConc$Sampling <- NULL
+PminConc$Conc_ug.ul <- NULL
+
+#* Histological####
+#organize hist file
+hist$`rate diam` <- NULL
+hist$`rate dens` <- NULL
+hist$`rate surface` <- NULL 
+hist$`average diameter` <- NULL
+hist$`error diameter` <- NULL
+hist$`average density` <- NULL
+hist$`error density` <- NULL
+hist$`average surface` <- NULL
+hist$`error surface` <- NULL
+
+hist <- hist %>%
+  rename(
+    diameter = 'Diameter (μm)',
+    density = 'Density (nº vessels/mm2)',
+    surface = 'Surface vessels/total surface (mm2 xilema/mm2)',
+  )
+
+library(dplyr)
+hist.charact <- dplyr::left_join(hist, charact, by = "rootstock")
+
+```
+
+## Classes
+
+The independent and dependent variables cannot be compared, at least not in their current state. The main issue here is the dependent (DNA concentration and fungal incidence) variable data has a different number of samples/rootstock than the independent (histological) variables. This means that we cannot truly combine all the data into one usable data set without using averages. Averages are potentially useful in preliminary data visualization, but not statistically useful (code for averages lines 89-109). The alternative is to turn the independent variable into a qualitative measure. We will do this by creating "classes" for each independent variable.
+
+These classes are assigned as follows :
+- 5 Diameter classes :
+<44um, 45-54um, 55-64um,	65-74um, and	75-84	um. 
+- 5 Density classes : 
+under 36, 37-46, 47-56,	57-66, 67 and above (nº vessels/mm2)
+- 5 Surface classes 
+.10-.14,	.15-.19,	.20-24,	.24-.30, .31 and above (mm2 xylem/ total mm2)
+
+Classes are summed up in the "hist.groups" sheet and were then inputted into the following sheets of the "internshipanalysis.xlsx" excel file. 
+-"histwclasses" 
+-"PchConc"
+-"PminConc"
+
+#Data Analysis 
+
+## Data Analysis Intro
+
+Steps 
+1. Data exploration 
+2. Initial statistical tests
+- if the data was parametric ANOVA was used 
+- if the data was non-parametric, Kruskal-Wallis was used 
+3. Post hoc tests
+- if the data was parametric Tukey's HSD test and student's t-tests were used 
+- if the data was non-parametric, Dunn and Wilcoxon rank sum tests were used 
+
+The data was studied independently for each varaible and then together via the classes.
+
+
+## Dependent variables - Pch and Pmin DNA Concentration
+
+### Pch DNA Concentration
+
+1. Data exploration. We will evaluate the data for the following: 
+- A: Outliers and Y distribution
+- B: Number of modalites for X 
+- C: Relation between Y et X
+- D: Interactions between  Xs
+- E: Collinearity between  Xs
+
+```{r Pch dist ggplots, warning = FALSE, message = FALSE}
+library(ggplot2)
+ggplot(PchConc, aes(x=Conc_pg.ul)) + 
+  geom_density(color="darkblue", fill="lightblue") + 
+  labs(x = "Pch DNA concentration", y = "Frequency") 
+```
+
+```{r Pch conc data exploration, warning = FALSE, message = FALSE}
+# Outliers
+par(mfrow=c(1,2))
+boxplot(PchConc$Conc_pg.ul
+        ,col='red'
+        ,ylab='Conc')
+dotchart(PchConc$Conc_pg.ul
+         ,pch=16
+         , xlab='Conc'
+         ,col='red')
+
+# Distribution of Y vvalues
+par(mfrow=c(1,2))
+##Histogram
+hist(PchConc$Conc_pg.ul
+     ,breaks=8
+     , xlab='DNA concentration')
+## Quantile-Quantile Plot
+qqnorm(PchConc$Conc_pg.ul)
+qqline(PchConc$Conc_pg.ul)
+
+# B -Number of modalites for X 
+PchConc$rootstock <- as.factor(PchConc$rootstock)
+library(ARTool)
+str(PchConc$rootstock)
+
+# C - Relation(s) between Y et X
+boxplot(PchConc$Conc_pg.ul~PchConc$rootstock, 
+        varwidth = TRUE,
+        ylab = "DNA Concenration",
+        xlab = "Rootstock")
+```
+
+2. Data analysis - initial tests
+As the data is non-parametric we will likely be unable to use anova, but we will try and check the residuals. 
+If  the residuals are also non-normal we will use a Kruskal-Walllis test and follow with Dunn or Mann-Whiteney (two sample Wilcoxon) post-hoc tests. If the residues are normal we will keep the anova test and follow-up with a Tukey's HSD test. 
+```{r Pch conc data analysis, warning = FALSE, message = FALSE}
+#anova
+a2 <- aov(Conc_pg.ul ~ rootstock, data = PchConc) 
+anova(a2)
+#p-value = 1.193e-13 ***, v sig
+#normality of residuals check
+#distrubution/normality
+par(mfrow=c(1,2))
+#Histogramme
+hist(a2$residuals)
+# Q-Q Plot
+qqnorm(a2$residuals)
+qqline(a2$residuals)
+#more normal, but still not that normal
+shapiro.test(a2$residuals)
+#p-value < 2.2e-16, not normal. Will use Kruskal-Wallis test
+PchConc$rootstock <- as.factor(PchConc$rootstock)
+#Kruskal.Wallis test
+kruskal.test(Conc_pg.ul ~ rootstock, data = PchConc)
+#p-value < 2.2e-16, significant
+```
+
+3. Post-hoc tests
+
+```{r Pch conc post-hoc, warning = FALSE, message = FALSE}
+# #post-hoc test Dunn
+# library(FSA)
+# dunnTest(Conc_pg.ul ~ rootstock, data = PchConc, method ="bh")
+# #post-hoc test Wilcoxon rank sum test
+library(ggpubr)
+w.g.pchconc<- compare_means(Conc_pg.ul ~ rootstock, PchConc, method="wilcox.test",
+              ref.group = ".all.")
+w.g.pchconc <- subset(w.g.pchconc, p.signif!="ns")
+w.g.pchconc <- dplyr::rename(w.g.pchconc, rootstock = "group2")
+w.g.pchconc <- left_join(PchMeanConc, w.g.pchconc, by = "rootstock")
+colnames(w.g.pchconc)
+w.g.pchconc <- w.g.pchconc[, -c(4:6)] 
+w.g.pchconc <-na.omit(w.g.pchconc)
+w.g.pchconc
+# library(csv)
+# write.csv2(w.g.pchconc, "Pch.wilcox.csv")
+```
+
+Dunn test were also run with the above code, but the results are not shown. Wilcox results are shown as they are included in the final ggplots. Only the significant values are listed.
+
+
+### Pmin DNA concentration
+1. Data exploration (same as above)
+```{r pmin dist ggplots, warning = FALSE, message = FALSE}
+library(ggplot2)
+ggplot(PminConc, aes(x=Conc_pg.ul)) + 
+  geom_density(color="darkblue", fill="lightblue") + 
+  labs(x = "Pmin DNA concentration", y = "Frequency") 
+```
+
+
+```{r Pmin conc data exploration, warning = FALSE, message = FALSE}
+# A - Outliers and Y distribution
+# Outliers
+par(mfrow=c(1,2))
+boxplot(PminConc$Conc_pg.ul
+        ,col='red'
+        ,ylab='Conc')
+dotchart(PminConc$Conc_pg.ul
+         ,pch=16
+         , xlab='Conc'
+         ,col='red')
+
+## Distribution of Y values
+par(mfrow=c(1,2))
+#Histogram
+hist(PminConc$Conc_pg.ul
+     ,breaks=8
+     , xlab='DNA concentration')
+# Quantile-Quantile Plot
+qqnorm(PminConc$Conc_pg.ul)
+qqline(PminConc$Conc_pg.ul)
+
+# B -Number of modalites for X 
+PminConc$rootstock <- as.factor(PminConc$rootstock)
+library(ARTool)
+str(PminConc$rootstock)
+# 24 modalities but each one has a different number of samples.
+
+# C - Relation(s) between Y et X
+boxplot(PminConc$Conc_pg.ul~PminConc$rootstock, 
+        varwidth = TRUE,
+        ylab = "DNA Concenration",
+        xlab = "Rootstock")
+```
+
+2. Data analysis - initial tests
+As the data is non-parametric we will likely be unable to use anova, but we will try and check the residuals. 
+If  the residuals are also non-normal we will use a Kruskal-Walllis test and follow with Dunn or Mann-Whiteney (two sample Wilcoxon) post-hoc tests. If the residues are normal we will keep the anova test and follow-up with a Tukey's HSD test. 
+```{r Pmin conc data analysis, warning = FALSE, message = FALSE}
+a3 <- aov(Conc_pg.ul ~ rootstock, data = PminConc) 
+anova(a3)
+#p-value < 2.2e-16 ***, v sig
+#check normality of residuals 
+par(mfrow=c(1,2))
+#Histogramme
+hist(a3$residuals)
+# Q-Q Plot
+qqnorm(a3$residuals)
+qqline(a3$residuals)
+#not quite normal
+shapiro.test(a3$residuals)
+#p-value < 2.2e-16, not normal
+PminConc$rootstock <- as.factor(PminConc$rootstock)
+kruskal.test(Conc_pg.ul ~ rootstock, data = PminConc)
+#p-value = 3.167e-13, significant
+```
+
+3. Post-hoc
+```{r Pmin conc post-hoc, warning = FALSE, message = FALSE}
+#Post-hoc tests
+#post-hoc test Dunn
+# library(FSA)
+# dunnTest(Conc_pg.ul ~ rootstock, data = PminConc, method ="bh")
+# #post-hoc test Wilcoxon rank sum test
+library(ggpubr)
+w.pminconc<- compare_means(Conc_pg.ul ~ rootstock, PminConc, method="wilcox.test",
+              ref.group = ".all.")
+w.pminconc <- subset(w.pminconc, p.signif!="ns")
+w.pminconc <- dplyr::rename(w.pminconc, rootstock = "group2")
+w.pminconc <- left_join(PminMeanConc, w.pminconc, by = "rootstock")
+colnames(w.pminconc)
+w.pminconc <- w.pminconc[, -c(4:5)] 
+w.pminconc <-na.omit(w.pminconc)
+w.pminconc
+# library(csv)
+# write.csv2(w.pminconc, "Pmin.wilcox.csv")
+```
+
+Dunn test was run as well but pnly the Wilcoxon results are shown as they will be used in the final ggplots. Only the significant values are listed.
+
+## Independent variables - Histological factors (xylem diameter, density, and surface area)
+
+```{r indep data expl ggplots, warning = FALSE, message = FALSE}
+library(ggplot2)
+a <- ggplot(hist, aes(x=diameter)) + 
+  geom_density(color="darkblue", fill="lightblue") + 
+  labs(x = "Diameter", y = "Frequency") 
+b <- ggplot(hist, aes(x=density)) + 
+  geom_density(color="darkblue", fill="lightblue") +
+  labs(x = "Density", y = "Frequency") 
+c <- ggplot(hist, aes(x=surface)) + 
+  geom_density(color="darkblue", fill="lightblue") +
+  labs(x = "Surface", y = "Frequency") 
+library(ggpubr)
+ggarrange(a, b, c, ncol = 2, nrow = 2)
+```
+
+### Diameter 
+1. Data exploration (same as above)
+```{r diameter data exploration, warning = FALSE, message = FALSE}
+# A - Outliers and Y distribution
+# Outliers
+par(mfrow=c(1,2))
+boxplot(hist$diameter,
+        col = 'blue')
+dotchart(hist$diameter,
+         col = 'blue')
+
+#Distribution of Y values
+par(mfrow=c(1,2))
+#Histogram
+hist(hist$diameter
+     ,breaks=8
+     , xlab='diameter')
+#Quantile-Quantile Plot
+qqnorm(hist$diameter)
+qqline(hist$diameter)
+
+# B -Number of modalites for X 
+summary(hist$rootstock)
+
+# C - Relation(s) between Y et X
+boxplot(hist$diameter ~ hist$rootstock, 
+        varwidth = TRUE,
+        ylab = "Surface",
+        xlab = "Rootstock")
+
+```
+
+2. Data analysis
+As the data is non-parametric we will likely be unable to use anova, but we will try and check the residuals. 
+If  the residuals are also non-normal we will use a Kruskal-Walllis test and follow with Dunn or Mann-Whiteney (two sample Wilcoxon) post-hoc tests.If the residues are normal we will keep the anova test and follow-up with a Tukey's HSD test. 
+
+```{r diameter data analysis, warning = FALSE, message = FALSE}
+e0 <- aov(diameter ~ rootstock, data = hist)
+anova(e0)
+#3.106e-09 ***, strongly significant
+#normality and distribution of residues
+par(mfrow=c(1,2))
+#Histogram
+hist(e0$residuals)
+# Q-Q Plot
+qqnorm(e0$residuals)
+qqline(e0$residuals)
+#decently normal
+shapiro.test(e0$residuals)
+#p-value = 0.0001813, very close but not normal
+hist$rootstock <- as.factor(hist$rootstock)
+kruskal.test(diameter ~ rootstock, data = hist)
+#p-value = 2.827e-06, significant 
+```
+
+3. Post-hoc
+
+```{r diamater post hoc, warning = FALSE, message = FALSE}
+#Post hoc
+#Dunn
+# library(FSA)
+# dunnTest(diameter ~ rootstock, data = hist, method ="bh")
+#Wilcoxon rank sum test
+library(ggpubr)
+w.diam.r <- compare_means(diameter ~ rootstock, hist, method="wilcox.test",
+              ref.group = ".all.")
+w.diam.r <- subset(w.diam.r, p.signif!="ns")
+w.diam.r <- dplyr::rename(w.diam.r, rootstock = "group2")
+w.diam.r <- left_join(hist.avrgs, w.diam.r, by = "rootstock")
+colnames(w.diam.r)
+w.diam.r <- w.diam.r[, -c(4:12)] 
+w.diam.r <-na.omit(w.diam.r)
+w.diam.r
+# library(csv)
+# write.csv2(w.diam.r, "Diam.r.wilcox.csv")
+```
+Dunn test was run as well but pnly the Wilcoxon results are shown as they will be used in the final ggplots. Only the significant values are listed.
+
+4. parents
+```{r diameter parent data analysis, warning = FALSE, message = FALSE}
+x0 <- aov(diameter ~ parents, data = hist.charact)
+anova(x0)
+#0.004508 **, strongly significant
+#normality and distribution of residues
+par(mfrow=c(1,2))
+#Histogram
+hist(x0$residuals)
+# Q-Q Plot
+qqnorm(x0$residuals)
+qqline(x0$residuals)
+#looks normal!
+shapiro.test(x0$residuals)
+#p-value = p-value = 0.001225, not normal
+hist.charact$parents <- as.factor(hist.charact$parents)
+kruskal.test(diameter ~ parents, data = hist.charact)
+#p-value = 0.0004902, significant
+
+# library(FSA)
+# dunnTest(diameter ~ parents, data = hist.charact, method ="bh")
+#Wilcoxon ranked sum
+library(ggpubr)
+w.diam.p <- compare_means(diameter ~ parents, hist.charact, method="wilcox.test",
+              ref.group = ".all.")
+w.diam.p <- subset(w.diam.p, p.signif!="ns")
+w.diam.p
+# library(csv)
+# write.csv2(w.diam.p, "Diam.p.wilcox.csv")
+```
+
+### Density 
+1. Data exploration (same as above)
+```{r density data exploration, warning = FALSE, message = FALSE}
+# A - Outliers and Y distribution
+# Outliers
+par(mfrow=c(1,2))
+boxplot(hist$density,
+        col = 'blue')
+dotchart(hist$diameter,
+         col = 'blue')
+
+# Distribution of Y vvalues
+par(mfrow=c(1,2))
+#Histogram
+hist(hist$density
+     ,breaks=8
+     , xlab='density')
+#Quantile-Quantile Plot
+qqnorm(hist$density)
+qqline(hist$density)
+
+# B -Number of modalites for X 
+summary(hist$rootstock)
+
+# C - Relation(s) between Y et X
+boxplot(hist$density ~ hist$rootstock, 
+        varwidth = TRUE,
+        ylab = "Surface",
+        xlab = "Rootstock")
+```
+
+2. Data analysis
+As the data is non-parametric we will likely be unable to use anova, but we will try and check the residuals. 
+If  the residuals are also non-normal we will use a Kruskal-Walllis test and follow with Dunn or Mann-Whiteney (two sample Wilcoxon) post-hoc tests. If the residues are normal we will keep the anova test and follow-up with a Tukey's HSD test. 
+
+```{r density data analysis, warning = FALSE, message = FALSE}
+e1 <- aov(density ~ rootstock, data = hist)
+anova(e1)
+#2.572e-13 ***, strongly significant
+#normality and distribution of residues
+par(mfrow=c(1,2))
+#Histogram
+hist(e1$residuals)
+# Q-Q Plot
+qqnorm(e1$residuals)
+qqline(e1$residuals)
+#looks normal!
+shapiro.test(e1$residuals)
+#p-value = p-value = 0.06405, very slightly normal!
+#so anova test stands and there are signficant differences
+```
+
+
+3. Post-hoc
+
+```{r density post hoc, warning = FALSE, message = FALSE}
+#Post hoc
+#Tukey's HSD
+#TukeyHSD(e1, conf.level=.95) 
+#Wilcoxon ranked sum
+library(ggpubr)
+t.dens.r <- compare_means(density ~ rootstock, hist, method="t.test",
+              ref.group = ".all.")
+t.dens.r <- subset(t.dens.r, p.signif!="ns")
+t.dens.r <- dplyr::rename(t.dens.r, rootstock = "group2")
+t.dens.r <- left_join(hist.avrgs, t.dens.r, by = "rootstock")
+colnames(t.dens.r)
+t.dens.r <- t.dens.r[, -c(2:4, 7:12)] 
+t.dens.r <-na.omit(t.dens.r)
+t.dens.r
+# library(csv)
+# write.csv2(t.dens.r, "Dens.r.ttest.csv")
+```
+
+Tukey's HSD test was run, but there are far too many results to show in this Rmd file.T-test results are shown as they will be used in the final ggplots. Only the significant values are listed.
+
+4. Parents
+
+
+```{r density parent data analysis, warning = FALSE, message = FALSE}
+x1 <- aov(density ~ parents, data = hist.charact)
+anova(x1)
+#3.901e-06 ***, strongly significant
+#normality and distribution of residues
+par(mfrow=c(1,2))
+#Histogram
+hist(x1$residuals)
+# Q-Q Plot
+qqnorm(x1$residuals)
+qqline(x1$residuals)
+#looks normal!
+shapiro.test(x1$residuals)
+#p-value = p-value = 0.005285, not normal
+hist.charact$parents <- as.factor(hist.charact$parents)
+kruskal.test(density ~ parents, data = hist.charact)
+#p-value = 0.0008763, significant
+
+# library(FSA)
+# dunnTest(density ~ parents, data = hist.charact, method ="bh")
+#Wilcoxon ranked sum
+library(ggpubr)
+w.dens.p <- compare_means(density ~ parents, hist.charact, method="wilcox.test",
+              ref.group = ".all.")
+w.dens.p <- subset(w.dens.p, p.signif!="ns")
+w.dens.p
+# library(csv)
+# write.csv2(w.dens.p, "Dens.p.wilcox.csv")
+```
+
+
+### Surface 
+1. Data exploration (same as above)
+
+```{r surface data exploration, warning = FALSE, message = FALSE}
+# A - Outliers and Y distribution
+# Outliers
+par(mfrow=c(1,2))
+boxplot(hist$surface,
+        col = 'blue')
+dotchart(hist$surface,
+         col = 'blue')
+#two outliers 
+
+## Distribution of Y vvalues
+par(mfrow=c(1,2))
+#Histogram
+hist(hist$surface
+     ,breaks=8
+     , xlab='surface')
+# Quantile-Quantile Plot
+qqnorm(hist$surface)
+qqline(hist$surface)
+
+# B -Number of modalites for X 
+summary(hist$rootstock)
+
+# C - Relation(s) between Y et X
+boxplot(hist$surface ~ hist$rootstock, 
+        varwidth = TRUE,
+        ylab = "Surface",
+        xlab = "Rootstock")
+```
+
+2. Data analysis
+As the data is non-parametric we will likely be unable to use anova, but we will try and check the residuals. 
+If  the residuals are also non-normal we will use a Kruskal-Walllis test and follow with Dunn or Mann-Whiteney (two sample Wilcoxon) post-hoc tests. If the residues are normal we will keep the anova test and follow-up with a Tukey's HSD test. 
+
+```{r surface data analysis, warning = FALSE, message = FALSE}
+e2 <- aov(surface ~ rootstock, data = hist)
+anova(e2)
+#6.169e-06 ***, strongly significant
+#normality and distribution of residues
+par(mfrow=c(1,2))
+#Histogram
+hist(e2$residuals)
+# Q-Q Plot
+qqnorm(e2$residuals)
+qqline(e2$residuals)
+#kind of normal
+shapiro.test(e2$residuals)
+#p-value = 1.152e-13, not normal
+hist$rootstock <- as.factor(hist$rootstock)
+kruskal.test(surface ~ rootstock, data = hist)
+#p-value = 1.308e-07, significant 
+```
+
+3. Post-hoc
+
+```{r surface post hoc, warning = FALSE, message = FALSE}
+#Post hoc
+#Dunn
+#library(FSA)
+#dunnTest(surface ~ rootstock, data = hist, method ="bh")
+#Wilcoxon ranked sum
+library(ggpubr)
+w.surf.r <- compare_means(surface ~ rootstock, hist, method="wilcox.test",
+              ref.group = ".all.")
+w.surf.r <- subset(w.surf.r, p.signif!="ns")
+w.surf.r <- dplyr::rename(w.surf.r, rootstock = "group2")
+w.surf.r <- left_join(hist.avrgs, w.surf.r, by = "rootstock")
+colnames(w.surf.r)
+w.surf.r <- w.surf.r[, -c(2:5, 8:12)] 
+w.surf.r <-na.omit(w.surf.r)
+w.surf.r
+# library(csv)
+# write.csv2(w.surf.r, "Surf.r.wilcox.csv")
+```
+
+Dunn test was run as well but pnly the Wilcoxon results are shown as they will be used in the final ggplots. Only the significant values are listed.
+
+4. Parents
+
+```{r surface parent data analysis, warning = FALSE, message = FALSE}
+x2 <- aov(surface ~ parents, data = hist.charact)
+anova(x2)
+#0.007644 **, strongly significant
+#normality and distribution of residues
+par(mfrow=c(1,2))
+#Histogram
+hist(x2$residuals)
+# Q-Q Plot
+qqnorm(x2$residuals)
+qqline(x2$residuals)
+#looks normal!
+shapiro.test(x2$residuals)
+#p-value = p-value = 1.095e-13, not normal
+hist.charact$parents <- as.factor(hist.charact$parents)
+kruskal.test(surface ~ parents, data = hist.charact)
+#p-value = 1.875e-06, significant
+#post hoc
+# library(FSA)
+# dunnTest(surface ~ parents, data = hist.charact, method ="bh")
+#Wilcoxon ranked sum
+library(ggpubr)
+w.surf.p <- compare_means(surface ~ parents, hist.charact, method="wilcox.test",
+              ref.group = ".all.")
+w.surf.p <- subset(w.surf.p, p.signif!="ns")
+w.surf.p 
+# library(csv)
+# write.csv2(w.surf.p, "Surf.p.wilcox.csv")
+```
+### PCA
+
+```{r histological PCA 1}
+ colnames(hist.charact)
+h.c.pca <- prcomp(hist.charact[,c(3:5)], center = TRUE,scale. = TRUE)
+h.c.pca$center #mean of variables
+h.c.pca$scale #standard deviation of vairables
+h.c.pca$rotation
+summary(h.c.pca)
+str(h.c.pca)
+```
+```{r PCA plot}
+library(ggbiplot)
+ggbiplot(h.c.pca)
+```
+
+Diameter represents 61.0% of variance, density represents 0.32% of variance, and surface represents 0.067% variance. This is likely due to the fact that the surface measurement is not on the same scale as density and diameter. 
+
+
+## Independent v. Dependent
+
+As was already mentioned, the original independent and dependent variables cannot be compared. To combat this the independent variables were converted to qualitative factors (classes).
+
+### Pch Concentration v. Histological Classes
+1. Data exploration
+
+```{r pch conc v hist class dist ggplots, warning = FALSE, message = FALSE}
+PchConc$diam.class <- as.factor(PchConc$diam.class)
+PchConc$dens.class <- as.factor(PchConc$dens.class)
+PchConc$surf.class <- as.factor(PchConc$surf.class)
+
+library(ggplot2)
+g <- ggplot(PchConc, aes(x = diam.class,y = Conc_pg.ul, color = diam.class)) + geom_boxplot()
+Diam.pchplot <- g + geom_jitter(shape  = 16, position = position_jitter(0.2)) + theme_classic() + 
+  labs(x = "Diameter Class", y = "Pch DNA Concentration", color = "Diameter Class")
+h <- ggplot(PchConc, aes(x = dens.class,y = Conc_pg.ul, color = dens.class)) + geom_boxplot()
+Dens.pchplot <- h + geom_jitter(shape  = 16, position = position_jitter(0.2)) + theme_classic() + 
+  labs(x = "Density Class", y = "Pch DNA Concentration", color = "Density Class")
+i <- ggplot(PchConc, aes(x = surf.class,y = Conc_pg.ul, color = surf.class)) + geom_boxplot()
+Surf.pchplot <- i + geom_jitter(shape  = 16, position = position_jitter(0.2)) + theme_classic() + 
+  labs(x = "Surface Class", y = "Pch DNA Concentration", color = "Surface Class")
+library(ggpubr)
+ggarrange(Diam.pchplot, Dens.pchplot, Surf.pchplot, ncol = 2, nrow = 2)
+```
+
+```{r pch conc v hist class data exploration, warning = FALSE, message = FALSE}
+# Data exploration already run above for y
+# X data exploration : 
+# B -Number of modalites for X 
+library(ARTool)
+str(PchConc)
+# as factor
+PchConc$diam.class <- as.factor(PchConc$diam.class)
+PchConc$dens.class <- as.factor(PchConc$dens.class)
+PchConc$surf.class <- as.factor(PchConc$surf.class)
+str(PchConc)
+
+
+# do these factors interact at all?
+table(PchConc$diam.class, PchConc$dens.class)
+
+table(PchConc$dens.class, PchConc$surf.class)
+
+table(PchConc$diam.class, PchConc$surf.class)
+
+
+# C - Relation(s) between Y et X
+par(mfrow=c(1,3))
+boxplot(PchConc$Conc_pg.ul~PchConc$diam.class, 
+        varwidth = TRUE,
+        ylab = "DNA Concentration",
+        xlab = "Diameter Class",
+        col='lightblue',
+        main = "")
+boxplot(PchConc$Conc_pg.ul~PchConc$dens.class, 
+        varwidth = TRUE,
+        ylab = "DNA Concentration",
+        xlab = "Density Class",
+        col='lightblue',
+        main = "")
+boxplot(PchConc$Conc_pg.ul~PchConc$surf.class, 
+        varwidth = TRUE,
+        ylab = "DNA Concentration",
+        xlab = "Surface Class",
+        col='lightblue',
+        main = "")
+
+# D - Interactions between Xs
+boxplot(PchConc$Conc_pg.ul~PchConc$diam.class*PchConc$dens.class*PchConc$surf.class,
+        varwidth = TRUE,
+        ylab = "DNA Concentration",
+        col='lightblue',
+        main = "")
+```
+
+2. Data analysis
+As we have one quantitative dependent variable and three qualitative independent variables, a three-way ANOVA would be the best way to approach this data. Unfortunately though, our data has tended to be very non-parametric (almost following a Poisson distribution), and ANOVA requires normal residuals. We run a three-way ANOVA to see what our residuals might be. Again, we will only keep the ANOVA as our test if our residuals are normal. 
+
+```{r 3 way anova pch conc, warning = FALSE, message = FALSE }
+# Three way ANOVA 
+h0  <- lm(Conc_pg.ul ~ diam.class*dens.class*surf.class, data = PchConc)
+anova(h0)
+#normality of residuals check
+#distrubution/normality
+par(mfrow=c(1,2))
+#Histogram
+hist(h0$residuals)
+# Q-Q Plot
+qqnorm(h0$residuals)
+qqline(h0$residuals)
+#not at all normal
+shapiro.test(h0$residuals)
+```
+
+Shapiro test p-value < 2.2e-16, not normal. We cannot run an anova. 
+To have normal residuals we would have to remove 79 observations (out of 233) and transform with an orderNorm transformation, but this looses too much data. We can try a ranked transformation normally, but even this was not sufficient. The transformation code can be requested, but is not  included as it was all unsuccessful. So, we continued with kruskal-wallis and will have to work with one factor at a time. This means we do not know the impact of all three factors together. 
+
+- by diameter
+
+```{r kruskal and post hoc pch/diam class, warning = FALSE, message = FALSE, results = 'hide'}
+#Kruskal.Wallis test
+kruskal.test(Conc_pg.ul ~ diam.class, data = PchConc)
+# Kruskal-Wallis rank sum test
+# 
+# data:  Conc_pg.ul by diam.class
+# Kruskal-Wallis chi-squared = 23.213, df = 4, p-value = 0.0001148
+#Post-hoc tests:
+#Dunn
+PchConc$diam.class <- as.factor(PchConc$diam.class)
+# library(FSA)
+# dunnTest(Conc_pg.ul ~ diam.class, data = PchConc, method ="bh")
+#Wilcoxon ranked sum
+library(ggpubr)
+w.diam.c <- compare_means(Conc_pg.ul ~ diam.class, PchConc, method="wilcox.test",
+              ref.group = ".all.")
+w.diam.c <- subset(w.diam.c, p.signif!="ns")
+w.diam.c
+```
+- by density
+
+```{r kruskal and post hoc pch/dens class, warning = FALSE, message = FALSE, results = 'hide'}
+#Kruskal.Wallis test
+kruskal.test(Conc_pg.ul ~ dens.class, data = PchConc)
+# Kruskal-Wallis rank sum test
+# 
+# data:  Conc_pg.ul by dens.class
+# Kruskal-Wallis chi-squared = 13.675, df = 4, p-value = 0.008408
+#Post-hoc tests:
+#Dunn
+PchConc$dens.class <- as.factor(PchConc$dens.class)
+# library(FSA)
+# dunnTest(Conc_pg.ul ~ dens.class, data = PchConc, method ="bh")
+#Wilcoxon ranked sum
+library(ggpubr)
+w.dens.c <- compare_means(Conc_pg.ul ~ dens.class, PchConc, method="wilcox.test",
+              ref.group = ".all.")
+w.dens.c <- subset(w.dens.c, p.signif!="ns")
+w.dens.c
+```
+
+- by surface 
+
+```{r kruskal and post hoc pch/surf class, warning = FALSE, message = FALSE, results = 'hide'}
+kruskal.test(Conc_pg.ul ~ surf.class, data = PchConc)
+# Kruskal-Wallis rank sum test
+# 
+# data:  Conc_pg.ul by surf.class
+# Kruskal-Wallis chi-squared = 22.718, df = 4, p-value = 0.0001442
+#Post-hoc tests:
+#Dunn
+PchConc$surf.class <- as.factor(PchConc$surf.class)
+# library(FSA)
+# dunnTest(Conc_pg.ul ~ surf.class, data = PchConc, method ="bh")
+#Wilcoxon ranked sum
+library(ggpubr)
+w.surf.c <- compare_means(Conc_pg.ul ~ surf.class, PchConc, method="wilcox.test",
+              ref.group = ".all.")
+w.surf.c <- subset(w.surf.c, p.signif!="ns")
+w.surf.c
+```
+
+### Pmin Concentration v. Histological Classes
+
+1. Data exploration
+
+```{r pmin conc v hist class dist ggplots, warning = FALSE, message = FALSE}
+PminConc$diam.class <- as.factor(PminConc$diam.class)
+PminConc$dens.class <- as.factor(PminConc$dens.class)
+PminConc$surf.class <- as.factor(PminConc$surf.class)
+
+library(ggplot2)
+j <- ggplot(PminConc, aes(x = diam.class,y = Conc_pg.ul, color = diam.class)) + geom_boxplot()
+Diam.pminplot <- j + geom_jitter(shape  = 16, position = position_jitter(0.2)) + theme_classic() + 
+  labs(x = "Diameter Class", y = "Pmin DNA Concentration", color = "Diameter Class")
+k <- ggplot(PminConc, aes(x = dens.class,y = Conc_pg.ul, color = dens.class)) + geom_boxplot()
+Dens.pminplot <- k + geom_jitter(shape  = 16, position = position_jitter(0.2)) + theme_classic() + 
+  labs(x = "Density Class", y = "Pmin DNA Concentration", color = "Density Class")
+l <- ggplot(PminConc, aes(x = surf.class,y = Conc_pg.ul, color = surf.class)) + geom_boxplot()
+Surf.pminplot <- l + geom_jitter(shape  = 16, position = position_jitter(0.2)) + theme_classic() + 
+  labs(x = "Surface Class", y = "Pmin DNA Concentration", color = "Surface Class")
+library(ggpubr)
+ggarrange(Diam.pminplot, Dens.pminplot, Surf.pminplot, ncol = 2, nrow = 2)
+```
+
+```{r pminconc v hist class data exploration, warning = FALSE, message = FALSE}
+# Data exploration already run above for y
+# X data exploration : 
+# B -Number of modalites for X 
+library(ARTool)
+str(PminConc)
+# as factor
+PminConc$diam.class <- as.factor(PminConc$diam.class)
+PminConc$dens.class <- as.factor(PminConc$dens.class)
+PminConc$surf.class <- as.factor(PminConc$surf.class)
+str(PminConc)
+
+
+# do these factors interact at all?
+table(PminConc$diam.class, PminConc$dens.class)
+
+table(PminConc$dens.class, PminConc$surf.class)
+
+table(PminConc$diam.class, PminConc$surf.class) 
+
+
+# C - Relation(s) between Y et X
+boxplot(PminConc$Conc_pg.ul~PminConc$rootstock, 
+        varwidth = TRUE,
+        ylab = "DNA Concenration",
+        xlab = "Rootstock")
+```
+
+2. Data analysis
+Just like above, we have one quantitative dependent variable and three qualitative independent variables, a three-way ANOVA would be the best way to approach this data. Unfortunately though, our data has tended to be very non-parametric (almost following a Poisson distribution), and ANOVA requires normal residuals. We run a three-way ANOVA to see what our residuals might be. Again, we will only keep the ANOVA as our test if our residuals are normal. 
+
+```{r  3 way anova pmin conc, warning = FALSE, message = FALSE}
+# Three way ANOVA 
+h1  <- lm(Conc_pg.ul ~ diam.class*dens.class*surf.class, data = PminConc)
+anova(h1)
+#normality of residuals check
+#distribution/normality
+par(mfrow=c(1,2))
+#Histogram
+hist(h1$residuals)
+# Q-Q Plot
+qqnorm(h1$residuals)
+qqline(h1$residuals)
+#not at all normal
+shapiro.test(h1$residuals)
+```
+
+Shapiro test p-value < 2.2e-16, not normal. We cannot run an anova. 
+Just like Pch it impossible to get to an anova with normal residues without severely  manipulating the  data.  
+Code for this is available upon request or in "Transformations.R" file on github. 
+So we will again continue with kruskal wallis and will have to work with one factor at a time. This means we do not know the impact of all three factors together.
+
+- by diameter
+
+```{r kruskal and post hoc pmin/diam class, warning = FALSE, message = FALSE, results = 'hide'}
+kruskal.test(Conc_pg.ul ~ diam.class, data = PminConc)
+# Kruskal-Wallis rank sum test
+# 
+# data:  Conc_pg.ul by diam.class
+# Kruskal-Wallis chi-squared = 21.076, df = 4, p-value = 0.0003059
+#Post-hoc tests:
+#Dunn
+PminConc$diam.class <- as.factor(PminConc$diam.class)
+library(FSA)
+dunnTest(Conc_pg.ul ~ diam.class, data = PminConc, method ="bh")
+#Wilcoxon ranked sum
+w.diam.m <- compare_means(Conc_pg.ul ~ diam.class, PminConc, method="wilcox.test",
+              ref.group = ".all.")
+w.diam.m <- subset(w.diam.m, p.signif!="ns")
+w.diam.m
+```
+
+- by density
+
+```{r kruskal and post hoc pmin/dens class, warning = FALSE, message = FALSE, results = 'hide'}
+#Kruskal Wallis
+kruskal.test(Conc_pg.ul ~ dens.class, data = PminConc)
+# Kruskal-Wallis rank sum test
+# 
+# data:  Conc_pg.ul by dens.class
+# Kruskal-Wallis chi-squared = 13.956, df = 4, p-value = 0.007435
+#Post-hoc tests: 
+#Dunn
+PminConc$dens.class <- as.factor(PminConc$dens.class)
+library(FSA)
+dunnTest(Conc_pg.ul ~ dens.class, data = PminConc, method ="bh")
+#Wilcoxon ranked sum
+w.dens.m <- compare_means(Conc_pg.ul ~ dens.class, PminConc, method="wilcox.test",
+              ref.group = ".all.")
+w.dens.m <- subset(w.dens.m, p.signif!="ns")
+w.dens.m
+```
+
+- by surface
+
+```{r kruskal and post hoc pmin/surf class}
+#Kruskal Wallis
+kruskal.test(Conc_pg.ul ~ surf.class, data = PminConc)
+# Kruskal-Wallis rank sum test
+# 
+# data:  Conc_pg.ul by surf.class
+# Kruskal-Wallis chi-squared = 6.3703, df = 4, p-value = 0.1731
+#not significant! 
+```
+
+# Correlation
+
+Investigating the correlation between histological traits. 
+
+```{r diameter v density correlation calculation}
+#Kendall's test for correlation (for nonparametric data)
+library(ggpubr)
+DDcor <- cor.test(hist$diameter, hist$density, 
+                    method = "kendall")
+DDcor
+```
+The p-value of Kendall's test is < 2.2e-16. This is well below 0.05, indicating that there is a correlation between vessel diameter and density. 
+
+
+```{r diameter v surface correlation calculation}
+#Kendall's test for correlation (for nonparametric data)
+library(ggpubr)
+DiamScor <- cor.test(hist$diameter, hist$surface, 
+                    method = "kendall")
+DiamScor
+```
+The p-value of Kendall's test is 7.463e-08 . This is well below 0.05, indicating that there is a correlation between vessel diameter and proportion of surface area covered with xylem vessels. 
+
+```{r density v surface correlation calculation}
+#Kendall's test for correlation (for nonparametric data)
+library(ggpubr)
+DenScor <- cor.test(hist$density, hist$surface, 
+                    method = "kendall")
+DenScor
+```
+The p-value of Kendall's test is 0.2833 . This is above 0.05, indicating that there is **not** a correlation between vessel density and proportion of surface area covered with xylem vessels.  
+
+
+# Paper Figures/Tables
+
+## Tables
+
+```{r Tables 2 - 4 pch conc v hist class data kruskal groups, warning = FALSE, message = FALSE}
+#Diameter
+library(agricolae)
+pch.diam.groups <- kruskal(PchConc$Conc_pg.ul,
+                           PchConc$diam.class, group = TRUE) %>%
+  .$groups %>%
+  as_tibble(rownames = "diameter class") %>%
+  rename("diam.groups" = "groups")
+pch.diam.groups <- dplyr::rename(pch.diam.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
+  #standard error
+  Pch.D.Error <- PchConc %>%
+    group_by(diam.class) %>%
+    summarise(Pch.D.Error = standard_error(Conc_pg.ul))
+  Pch.D.Error <- dplyr::rename(Pch.D.Error, "diameter class" = "diam.class")
+  pch.diam.groups <- left_join(pch.diam.groups, Pch.D.Error, by = "diameter class")
+print(pch.diam.groups)
+#Density
+library(agricolae)
+pch.dens.groups <- kruskal(PchConc$Conc_pg.ul,
+                           PchConc$dens.class, group = TRUE) %>%
+  .$groups %>%
+  as_tibble(rownames = "density class") %>%
+  rename("des.groups" = "groups")
+pch.dens.groups <- dplyr::rename(pch.dens.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
+  #standard error
+    Pch.Dens.Error <- PchConc %>%
+      group_by(dens.class) %>%
+      summarise(Pch.Dens.Error = standard_error(Conc_pg.ul))
+    Pch.Dens.Error <- dplyr::rename(Pch.Dens.Error, "density class" = "dens.class")
+    pch.dens.groups <- left_join(pch.dens.groups, Pch.Dens.Error, by = "density class")
+print(pch.dens.groups)
+#Surface
+library(agricolae)
+pch.surf.groups <- kruskal(PchConc$Conc_pg.ul,
+                           PchConc$surf.class, group = TRUE) %>%
+  .$groups %>%
+  as_tibble(rownames = "surface class") %>%
+  rename("surf.groups" = "groups")
+pch.surf.groups <- dplyr::rename(pch.surf.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
+  #standard error
+    Pch.S.Error <- PchConc %>%
+      group_by(surf.class) %>%
+      summarise(Pch.S.Error = standard_error(Conc_pg.ul))
+    Pch.S.Error <- dplyr::rename(Pch.S.Error, "surface class" = "surf.class")
+    pch.surf.groups <- left_join(pch.surf.groups, Pch.S.Error, by = "surface class")
+
+print(pch.surf.groups)
+
+
+```
+
+
+```{r Tables 5 and 6 - pmin conc v hist class kruskal groups }
+#Diameter
+library(agricolae)
+pmin.diam.groups <- kruskal(PminConc$Conc_pg.ul,
+                           PminConc$diam.class, group = TRUE) %>%
+  .$groups %>%
+  as_tibble(rownames = "diameter class") %>%
+  rename("diam.groups" = "groups")
+pmin.diam.groups <- dplyr::rename(pmin.diam.groups, Conc_pg.ul = "PminConc$Conc_pg.ul")
+  #standard error
+  Pmin.D.Error <- PminConc %>%
+    group_by(diam.class) %>%
+    summarise(Pmin.D.Error = standard_error(Conc_pg.ul))
+  Pmin.D.Error <- dplyr::rename(Pmin.D.Error, "diameter class" = "diam.class")
+  pmin.diam.groups <- left_join(pmin.diam.groups, Pmin.D.Error, by = "diameter class")
+print(pmin.diam.groups)
+
+#Density
+library(agricolae)
+pmin.dens.groups <- kruskal(PminConc$Conc_pg.ul,
+                           PminConc$dens.class, group = TRUE) %>%
+  .$groups %>%
+  as_tibble(rownames = "density class") %>%
+  rename("dens.class" = "groups")
+pmin.dens.groups <- dplyr::rename(pmin.dens.groups, Conc_pg.ul = "PminConc$Conc_pg.ul")
+  #standard error
+  Pmin.Dens.Error <- PminConc %>%
+    group_by(dens.class) %>%
+    summarise(Pmin.Dens.Error = standard_error(Conc_pg.ul))
+  Pmin.Dens.Error <- dplyr::rename(Pmin.Dens.Error, "density class" = "dens.class")
+  pmin.dens.groups <- left_join(pmin.dens.groups, Pmin.Dens.Error, by = "density class")
+
+print(pmin.dens.groups)
+
+#Surface
+#Not significant, no groups
+```
+
+## Figure 1 - DNA concentrations by Rootstocks
+
+```{r fig 1 A - pch conc by rootstock, warning = FALSE, message = FALSE}
+#Pch Concentration by Rootstock
+library(ggplot2)
+library(ggpubr)
+plab <- expression(~italic("Pa. chlamydospora")~ "DNA concentration (pg*μL"^-1*")")
+ptit <- expression(~italic("Pa. chlamydospora")~ "DNA Concentration by Rootstock")
+x <- ggplot(data = PchConc, aes(x = rootstock, y = Conc_pg.ul)) 
+#run once to extract legend
+PchConcplot <- x + geom_boxplot(aes(color = "gray")) + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + theme(legend.position="none") + 
+  labs(x = "Rootstock", y = plab) + 
+  stat_compare_means(method = "kruskal.test", label.y = 500, label.x = "RICHTER 31") +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+# leg.diam <- get_legend(PchConcplot)
+PchConcplot
+#run a second time without legend
+PchConcplot <- x + geom_boxplot() + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + theme(legend.position = "none") + labs(x = "Rootstock", 
+       y = plab) +
+  stat_compare_means(method = "kruskal.test", label.y = 500, label.x = "RICHTER 31") +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+
+
+library(ggpubr)
+Fig.1leg <- as_ggplot(leg.diam)
+ggsave(filename = "Fig.1A.png", plot = PchConcplot, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+ggsave(filename = "Fig.1leg.png", plot = Fig.1leg, device = "png", height = 3, width = 4,
+       units = "in", dpi = 500)
+
+```
+
+```{r fig B pmin conc by rootstock, warning = FALSE, message = FALSE}
+#Pmin Concentration by Rootstock
+library(ggplot2)
+pmlab <- expression(~italic("Pm. minimum")~ "DNA concentration (pg*μL"^-1*")")
+ptit <- expression(~italic("Pm. minimum")~ "DNA Concentration by Rootstock")
+pminplot <- ggplot(data = PminConc, aes(x = rootstock, y = Conc_pg.ul, fill = diam.class)) + geom_boxplot()
+PminConcplot <- pminplot + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") +
+  labs(x = "Rootstock", 
+       y = pmlab) + scale_fill_viridis_d()  + 
+  stat_compare_means(method = "kruskal.test", label.y = 1500, label.x = "CASTEL 7605") +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+PminConcplot
+library(ggpubr)
+# PchPminConc <- ggarrange(PchConcplot, PminConcplot, ncol = 2, nrow = 1, legend = "right", legend.grob = leg.diam, heights=c(1,1))
+ggsave(filename = "Fig.1B.png", plot = PminConcplot, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+
+```
+
+
+## Figure 2 - Histological traits by rootstock 
+
+```{r Figure 2 - Histological traits by Roostock }
+
+denslab <- expression("Xylem vessel density (no. vessels/mm"^2*")")
+surflab <- expression("Xylem vessel surface (mm"^2* "xylem/total mm"^2* "surface area)")
+
+#Diameter 
+#by rootstock
+library(ggplot2)
+DiamR <- ggplot(data = hist.charact, aes( x = rootstock, y = diameter, fill = parents)) + 
+  geom_boxplot() 
+#DiamRplot is run twice to first extract the legend then get the graph without the legend (yes they could just be named differently, yes they could be simplified)
+DiamRplot <- DiamR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+   labs(x = "Rootstock variety", y = "Xylem Vessel Diameter (μm)") + 
+   scale_fill_viridis_d(name = "Parent Cross") + 
+   stat_compare_means(method = "kruskal.test", label.y = 20, label.x = "RICHTER 31") +
+   stat_compare_means(label = "p.signif", method = "wilcox.test",
+                      ref.group = ".all.", hide.ns = TRUE)   
+leg.parent <- get_legend(DiamRplot)
+
+DiamRplot <- DiamR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") +
+  labs(x = "Rootstock variety", y = "Xylem Vessel Diameter (μm)") + 
+  scale_fill_viridis_d() + 
+  stat_compare_means(method = "kruskal.test", label.y = 20, label.x = "RICHTER 31") +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)   
+
+DensR <- ggplot(data = hist.charact, aes( x = rootstock, y = density, fill = parents)) + 
+  geom_boxplot() 
+DensRplot <- DensR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") + labs(x = "Rootstock variety", y = denslab) + scale_fill_viridis_d() + stat_compare_means(method = "anova", label.y = 100, label.x = "COUDERC 1202") +
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = ".all.", hide.ns = TRUE)   
+
+SurfR <- ggplot(data = hist.charact, aes( x = rootstock, y = surface, fill = parents)) + 
+  geom_boxplot() 
+SurfRplot <- SurfR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") + labs(x = "Rootstock variety", y = surflab) + scale_fill_viridis_d() + 
+  stat_compare_means(method = "kruskal.test", label.y = 0.3, label.x = "BLANCHARD 1") +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+
+library(ggpubr)
+Fig.2leg <- as_ggplot(leg.parent)
+
+ggsave(filename = "Fig.2A.png", plot = DiamRplot, device = "png", height = 5, width = 10,
+       units = "in", dpi = 500)
+ggsave(filename = "Fig.2B.png", plot = DensRplot, device = "png", height = 6, width = 10,
+       units = "in", dpi = 500)
+ggsave(filename = "Fig.2C.png", plot = SurfRplot, device = "png", height = 6, width = 10,
+       units = "in", dpi = 500)
+ggsave(filename = "Fig.2leg.png", plot = Fig.2leg, device = "png", height = 6, width = 5,
+       units = "in", dpi = 500)
+```
+
+
+## Figure 3 - Correlation between histological traits
+
+### Figure 3.A - Diameter and Density Correlation
+
+Vessel diameter plotted against vessel density  
+
+```{r diameter v density correlation kendall graph}
+#denslab <- expression("Xylem vessel density (no. vessels/mm"^2*")")
+library(ggpubr)
+Diam.Dens.Corr <- ggscatter(hist, x = "diameter", y = "density", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "kendall",
+          xlab = "Xylem Vessel Diameter (μm)", ylab = denslab)
+
+Diam.Dens.Corr
+ggsave(filename = "Figure 3 A.png", plot = Diam.Dens.Corr, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+Diam.Dens.Corr
+```
+
+### Figure 3.B - Diameter and Surface Correlation
+
+Vessel diameter plotted against vessel surface area
+
+```{r diameter v surface kendall correlation graph}
+#surflab <- expression("Xylem vessel surface (mm"^2* "xylem/total mm"^2* "surface area)")
+library(ggpubr)
+Diam.Surf.Corr <- ggscatter(hist, x = "diameter", y = "surface", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "kendall",
+          xlab = "Xylem Vessel Diameter (μm)", ylab = surflab)
+
+Diam.Surf.Corr
+ggsave(filename = "Figure 3 B.png", plot = Diam.Surf.Corr, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+Diam.Surf.Corr
+```
+
+
+### Figure 3.C - Density and Surface Correlation
+
+Vessel density plotted against vessel surface area  
+
+```{r density v surface kendall correlation graph}
+library(ggpubr)
+Dens.Surf.Corr <- ggscatter(hist, x = "density", y = "surface", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "kendall",
+          xlab = denslab, ylab = surflab)
+
+Dens.Surf.Corr
+ggsave(filename = "Figure 3 C.png", plot = Dens.Surf.Corr, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+Dens.Surf.Corr
+```
+
+## Figure 4 - Histological traits by parent
+
+```{r fig.4  histological traitsby parennt}
+library(ggpubr)
+diam.p <- ggplot(hist.charact, aes(x = parents, y = diameter, fill = parents)) + geom_boxplot(show.legend = FALSE) +
+  labs(x = "Parents", y = "Xylem Vessel Diameter (μm)") + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5)) + scale_fill_viridis_d() + 
+  stat_compare_means(method = "kruskal.test", label.y = 75, label.x = "(Vinifera x Rupestris) x Riparia") +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)   
+dens.p <- ggplot(hist.charact, aes(x = parents, y = density, fill = parents)) + geom_boxplot(show.legend = FALSE) + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5)) + labs(x = "Parents", y = denslab) + scale_fill_viridis_d() +  stat_compare_means(method = "kruskal.test", label.y = 100, label.x = "(Vinifera x Rupestris) x Riparia") +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)   
+surf.p <- ggplot(hist.charact, aes(x = parents, y = surface, fill = parents)) + geom_boxplot(show.legend = FALSE) + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5)) + labs(x = "Parents", y = surflab) + scale_fill_viridis_d()+
+  stat_compare_means(method = "kruskal.test", label.y = 0.3, label.x = "(Vinifera x Rupestris) x Riparia") +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+
+
+ggsave(filename = "Fig.4A.png", plot = diam.p, device = "png", height = 5, width = 10,
+       units = "in", dpi = 500)
+ggsave(filename = "Fig.4B.png", plot = dens.p, device = "png", height = 5, width = 10,
+       units = "in", dpi = 500)
+ggsave(filename = "Fig.4C.png", plot = surf.p, device = "png", height = 6, width = 10,
+       units = "in", dpi = 500)
+
+```
+
+
+
+## Figure  5 - Classes
+
+### Figure 5A - Diameter class
+
+```{r fig.5a diameter class}
+plab <- expression(~italic("Pa. chlamydospora")~ "DNA concentration (pg*μL"^-1*")")
+ptit <- expression(~italic("Pa. chlamydospora")~ "DNA Concentration by Rootstock")
+pmlab <- expression(~italic("Pm. minimum")~ "DNA concentration (pg*μL"^-1*")")
+ptit <- expression(~italic("Pm. minimum")~ "DNA Concentration by Rootstock")
+
+Pch.diam <- ggplot(PchConc, aes(x = diam.class, y = Conc_pg.ul, fill = diam.class)) + geom_boxplot() +
+  labs(x = "Diameter class", y = plab) + scale_fill_viridis_d() + theme_classic() +
+  stat_compare_means(method = "kruskal.test", label.y = 450, label.x = 1) +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+
+Pmin.diam <- ggplot(PminConc, aes(x = diam.class, y = Conc_pg.ul, fill = diam.class)) + geom_boxplot() +
+  labs(x = "Diameter class", y = pmlab) + scale_fill_viridis_d() + theme_classic() +
+  stat_compare_means(method = "kruskal.test", label.y = 1000, label.x = 1) +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+library(ggpubr)
+diam.class.conc.plot <- ggarrange(Pch.diam, Pmin.diam, ncol = 2, nrow = 1, legend = "right", legend.grob = leg.diam)
+ggsave(filename = "Fig.5A.png", plot = diam.class.conc.plot, device = "png", height = 5, width = 10,
+       units = "in", dpi = 500)
+diam.class.conc.plot
+
+```
+
+###  Figure 5.B - Density class
+```{r fig.5b density class}
+Pch.dens <- ggplot(PchConc, aes(x = dens.class, y = Conc_pg.ul, fill = dens.class)) + geom_boxplot() +
+  labs(x = "Density class", y = plab) + scale_fill_viridis_d(name = "Density Class") +  theme_classic() +
+  stat_compare_means(method = "kruskal.test", label.y = 400, label.x = 1) +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+leg.dens <- get_legend(Pch.dens)
+Pmin.dens <- ggplot(PminConc, aes(x = dens.class, y = Conc_pg.ul, fill = dens.class)) + geom_boxplot() +
+  labs(x = "Density class", y = pmlab) + scale_fill_viridis_d() +  theme_classic() +
+  stat_compare_means(method = "kruskal.test", label.y = 1250, label.x = 1) +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+library(ggpubr)
+dens.class.conc.plot <- ggarrange(Pch.dens, Pmin.dens, ncol = 2, nrow = 1, legend = "right", legend.grob = leg.dens)
+ggsave(filename = "Fig.5B.png", plot = dens.class.conc.plot, device = "png", height = 5, width = 10,
+       units = "in", dpi = 500)
+dens.class.conc.plot
+```
+
+### Figure 5.C - Surface class
+```{r fig.5c surface  class}
+Pch.surf <- ggplot(PchConc, aes(x = surf.class, y = Conc_pg.ul, fill = surf.class)) + geom_boxplot() +
+  labs(x = "Surface class", y = plab) + scale_fill_viridis_d(name = "Surface Class")  + 
+  stat_compare_means(method = "kruskal.test", label.y = 400, label.x = 3) +  theme_classic() +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+leg.surf <- get_legend(Pch.surf)
+Pmin.surf <- ggplot(PminConc, aes(x = surf.class, y = Conc_pg.ul, fill = surf.class)) + geom_boxplot() +
+  labs(x = "Surface class", y = pmlab) + scale_fill_viridis_d()  +  theme_classic() +
+  stat_compare_means(method = "kruskal.test", label.y = 1000, label.x = 3) +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+library(ggpubr)
+surf.class.conc.plot <- ggarrange(Pch.surf, Pmin.surf, ncol = 2, nrow = 1, legend = "right", legend.grob = leg.surf)
+ggsave(filename = "Fig.5C.png", plot = surf.class.conc.plot, device = "png", height = 5, width = 10,
+       units = "in", dpi = 500)
+surf.class.conc.plot
+```
+
+# Supplemental Figures
+
+#### Pch Incidence 
+```{r pch incidence}
+#PchPres clean up and compilation of samples
+library(dplyr)
+#total analyzed
+TA <- PchPres %>%
+  group_by(rootstock, year, rep) %>%
+  summarise(total.analyzed = sum(`number of plants analyzed`))
+#total infected
+TI <- PchPres %>%
+  group_by(rootstock, year, rep) %>%
+  summarise(total.infected = sum(`infected plants`))
+#join total analyzed with total infected by Rootstock, year, and replication
+# by filterinng by rotation, we take into account the sampling  - no need to calculate the sampling 
+# incidences separetly, the total is still the same. 
+PchPresTotal <- left_join(TA, TI, by = c("rootstock", "year", "rep")) 
+PchPresTotal$PchIncidence <- (PchPresTotal$total.infected / PchPresTotal$total.analyzed)
+# PchPresTotal$total.analyzed <- NULL
+# PchPresTotal$total.infected <- NULL
+colnames(PchPresTotal)
+PchPresTotal <- PchPresTotal %>%
+  rename(PchAnalyzed = 'total.analyzed',
+         PchInfected = 'total.infected',
+         )
+```
+
+```{r pch inc data analysis}
+#2017
+pch2017 <- dplyr::filter(PchPresTotal, year == "2017")
+#normality
+shapiro.test(pch2017$PchIncidence)
+#p-value = 0.008894, not normal
+# anova
+b0 <- aov(PchIncidence ~rootstock, data = pch2017) 
+anova(b0)
+#p-value = 0.06454, not significant
+shapiro.test(b0$residuals)
+#p-value = 0.7201,  normal !
+```
+
+## Supplementary Figure  1
+
+### Figure  S1.A - Pch Incidence
+```{r pch inc ggplot}
+library(ggplot2)
+
+pchlab <- expression("Percent" ~italic("Pa. chlamydospora")~ "incidence")
+pcht <- expression(~italic("Pa. chlamydospora")~ "Incidence by Rootstock")
+
+PchPlot <- ggplot(data = pch2017, aes(x = rootstock, y = PchIncidence)) 
+allPchplot <- PchPlot + geom_jitter(color = "dimgray") + theme_light() + 
+  theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8),
+        axis.text = element_text(size = 8)) + 
+  labs(x = "Rootstock", 
+       y = pchlab) 
+ggsave(filename = "Figure S1.A.png", plot = allPchplot, device = "png", height = 5, width = 5,
+       units = "in", dpi = 500)
+allPchplot
+
+```
+
+
+#### Pmin Incidence
+```{r pmin inc}
+#total analyzed
+CA <- PminInc %>%
+  group_by(rootstock) %>%
+  summarise(total.analyzed = sum(`number of plants analyzed both reps together`))
+#total infected
+CI <- PminInc %>%
+  group_by(rootstock) %>%
+  summarise(total.infected = sum(`infected plants both reps together`))
+#join total analyzed and infected by rootstock (no year or rep as in Pch, 
+# result of less repititons for Pmin)
+PminIncTotal <- left_join(CA, CI, by = c("rootstock")) 
+PminIncTotal$PminIncidence <- (PminIncTotal$total.infected / PminIncTotal$total.analyzed)
+#remove superfluous columns 
+# PminIncTotal$total.analyzed <- NULL
+# PminIncTotal$total.infected <- NULL
+colnames(PminIncTotal)
+#renaming
+PminIncTotal <- PminIncTotal %>%
+  rename(PminAnalyzed = 'total.analyzed',
+         PminInfected = 'total.infected')
+```
+
+```{r pmin inc data analysis}
+#Pmin data anal
+shapiro.test(PminIncTotal$PminIncidence)
+#p-value = 0.07911, normal !
+# anova
+a1 <- aov(PminIncidence ~ rootstock, data = PminIncTotal) 
+anova(a1)
+```
+"Warning message:
+   In anova.lm(a1) :
+   ANOVA F-tests on an essentially perfect fit are unreliable"
+Reps were  added together... can't do  a  significance test with one replication
+
+### Figure  S1.B - Pmin Incidence
+
+```{r pmin inc ggplot}
+library(ggplot2)
+pminlab <- expression("Percent" ~italic("Pm. minimum")~ "incidence")
+pmintit <- expression(~italic("Pm. minimum")~ "Incidence by Rootstock")
+
+
+PminPlot <- ggplot(data = PminIncTotal, aes(x = rootstock, y = PminIncidence)) 
+allPminplot <- PminPlot + geom_jitter(color = "dimgray") + theme_light() + 
+  theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8),
+        axis.text = element_text(size = 8)) + 
+  labs(x = "Rootstock", 
+       y = pminlab)
+ggsave(filename = "Figure S1.B.png", plot = allPminplot, device = "png", height = 5, width = 5,
+       units = "in", dpi = 500)
+allPminplot
+```
+
+## Figure S2  
+
+### Figure S2.A
+
+```{r fig S2.A- pch conc by rootstock and dens class, warning = FALSE, message = FALSE}
+#Pch Concentration by Rootstock with density class
+library(ggplot2)
+y <- ggplot(data = PchConc, aes(x = rootstock, y = Conc_pg.ul, fill = dens.class)) 
+PchConcplot.d <- y + geom_boxplot() + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + labs(x = "Rootstock", 
+       y = plab) + scale_fill_viridis_d() 
+PchConcplot.d
+```
+
+```{r fig S2.A pmin conc by rootstock and dens class, warning = FALSE, message = FALSE}
+#Pmin Concentration by Rootstock
+library(ggplot2)
+pminplot <- ggplot(data = PminConc, aes(x = rootstock, y = Conc_pg.ul, fill = dens.class)) + geom_boxplot()
+PminConcplot.d <- pminplot + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  labs(x = "Rootstock", 
+       y = pmlab) + scale_fill_viridis_d() 
+PminConcplot.d
+library(ggpubr)
+Fig.S2A <- ggarrange(PchConcplot.d, PminConcplot.d, ncol = 2, nrow = 1, legend.grob = leg.dens, legend = "right", heights=c(1,1))
+ggsave(filename = "Figure S2.A.png", plot = Fig.S2A, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+```
+
+### Figure S2.B
+
+```{r fig S2.b- pch conc by rootstock and surf class, warning = FALSE, message = FALSE}
+#Pch Concentration by Rootstock with surface class
+library(ggplot2)
+z <- ggplot(data = PchConc, aes(x = rootstock, y = Conc_pg.ul, fill = surf.class)) 
+PchConcplot.s <- z + geom_boxplot()  + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + labs(x = "Rootstock", 
+       y = plab) + scale_fill_viridis_d()
+PchConcplot.s
+```
+
+```{r fig S2.B pmin conc by rootstock and surf class, warning = FALSE, message = FALSE}
+#Pmin Concentration by Rootstock
+library(ggplot2)
+pminplot <- ggplot(data = PminConc, aes(x = rootstock, y = Conc_pg.ul, fill = surf.class)) + geom_boxplot()
+PminConcplot.s <- pminplot  + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  labs(x = "Rootstock", 
+       y = pmlab) + scale_fill_viridis_d()
+PminConcplot.s
+library(ggpubr)
+Fig.S2B <- ggarrange(PchConcplot.s, PminConcplot.s, ncol = 2, nrow = 1, legend.grob = leg.surf, legend = "right", heights=c(1,1))
+ggsave(filename = "Figure S2.B.png", plot = Fig.S2B, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+```
+
+## Figure S3 - PCA of histological traits
+
+```{r Figure S3}
+library(ggbiplot)
+pca.plot <- ggbiplot(h.c.pca) + ggtitle("PCA of histological variables") + theme_classic()
+ggsave(filename = "Figure S3.png", plot = pca.plot, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+pca.plot
+```
+
+
+## Figure S4 - Histological traits by rootstock and parent
+
+### Figure S4.A - Xylem Vessel Diameter by Roostocks and Parents
+
+```{r Figure S4.A - Xylem Vessel Diameter by Roostocks and Parents}
+#Diameter 
+#by parent
+library(ggplot2)
+library(ggpubr)
+DiamP <- ggplot(data = hist.charact, aes( x = parents, y = diameter, fill = parents)) + 
+  geom_boxplot() 
+DiamPplot<- DiamP + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") + 
+  labs(x = "Parent",
+       y = "Xylem vessel diameter") + scale_fill_viridis_d() + 
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)   
+#by rootstock
+library(ggplot2)
+DiamR <- ggplot(data = hist.charact, aes( x = rootstock, y = diameter, fill = parents)) + 
+  geom_boxplot() 
+DiamRplot <- DiamR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") + 
+  labs(x = "Rootstock",
+       y = "Xylem vessel diameter") + scale_fill_viridis_d() + 
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)   
+
+
+
+
+library(ggpubr)
+DiamPvR <- ggarrange(DiamPplot, DiamRplot, ncol = 2, nrow = 1)
+DiamPvR
+ggsave(filename = "Figure S4 A and B.png", plot = DiamPvR, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+DiamPvR
+```
+
+
+### Figure S4.B - Xylem Vessel Density by Roostocks and Parents
+
+```{r Figure S4.B - Xylem Vessel Density by Roostocks and Parents}
+library(grDevices)
+mm2.exp <- expression(paste(" ",mm^2 ,"= 0.647"))
+library(ggpubr)
+#Density
+#by parent
+library(ggplot2)
+DensP <- ggplot(data = hist.charact, aes( x = parents, y = density, fill = parents)) + 
+  geom_boxplot() 
+DensPplot <- DensP + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") + 
+  labs(x = "Parent",
+       y = "Xylem vessel density") + scale_fill_viridis_d() + 
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)   
+
+#by rootstock
+DensR <- ggplot(data = hist.charact, aes( x = rootstock, y = density, fill = parents)) + 
+  geom_boxplot() 
+DensRplot <- DensR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") + 
+  labs(x = "Rootstock",
+       y = "Xylem vessel density") + scale_fill_viridis_d() +
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)   
+
+
+
+ggsave(filename = "DensR.png", plot = DensRplot, device = "png", height = 5, width = 5,
+         units = "in", dpi = 500) 
+DensPvR <- ggarrange(DensPplot, DensRplot, ncol = 2, nrow = 1)
+DensPvR
+ggsave(filename = "Figure S4 C and D.png", plot = DensPvR, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+DensPvR 
+```
+
+## Figure S3.C - Xylem Vessel Surface by Roostocks and Parents
+
+```{r Figure S3.C - Xylem Vessel Surface by Roostocks and Parents}
+#Surface
+#by parent
+library(ggpubr)
+library(ggplot2)
+SurfP <- ggplot(data = hist.charact, aes( x = parents, y = surface, fill = parents)) + 
+  geom_boxplot() 
+SurfPplot <- SurfP + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") + 
+  labs(x = "Parent",
+       y = "Xylem vessel surface") + scale_fill_viridis_d() + 
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+
+#by rootstock
+SurfR <- ggplot(data = hist.charact, aes( x = rootstock, y = surface, fill = parents)) + 
+  geom_boxplot() 
+SurfRplot <- SurfR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
+  theme(legend.position = "none") + 
+  labs(x = "Rootstock",
+       y = "Xylem vessel surface") + scale_fill_viridis_d() + 
+  stat_compare_means(label = "p.signif", method = "wilcox.test",
+                     ref.group = ".all.", hide.ns = TRUE)  
+
+SurfPvR <- ggarrange(SurfPplot, SurfRplot, ncol = 2, nrow = 1)
+SurfPvR
+ggsave(filename = "Figure S3 E and F.png", plot = SurfPvR, device = "png", height = 5, width = 8,
+       units = "in", dpi = 500)
+SurfPvR 
+
+```
