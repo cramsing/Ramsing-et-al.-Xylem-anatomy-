@@ -1153,18 +1153,18 @@ library(ggplot2)
 library(ggpubr)
 plab <- expression(~italic("Pa. chlamydospora")~ "DNA concentration (pg*μL"^-1*")")
 ptit <- expression(~italic("Pa. chlamydospora")~ "DNA Concentration by Rootstock")
-x <- ggplot(data = PchConc, aes(x = rootstock, y = Conc_pg.ul)) 
+x <- ggplot(data = PchConc, aes(x = rootstock, y = Conc_pg.ul, fill = diam.class)) 
 #run once to extract legend
-PchConcplot <- x + geom_boxplot(aes(color = "gray")) + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + theme(legend.position="none") + 
-  labs(x = "Rootstock", y = plab) + 
+PchConcplot <- x + geom_boxplot() + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + theme(legend.position="none") + 
+  labs(x = "Rootstock", y = plab) + scale_fill_viridis_d() +
   stat_compare_means(method = "kruskal.test", label.y = 500, label.x = "RICHTER 31") +
   stat_compare_means(label = "p.signif", method = "wilcox.test",
                      ref.group = ".all.", hide.ns = TRUE)  
-# leg.diam <- get_legend(PchConcplot)
+leg.diam <- get_legend(PchConcplot)
 PchConcplot
 #run a second time without legend
 PchConcplot <- x + geom_boxplot() + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + theme(legend.position = "none") + labs(x = "Rootstock", 
-       y = plab) +
+       y = plab) + scale_fill_viridis_d() +
   stat_compare_means(method = "kruskal.test", label.y = 500, label.x = "RICHTER 31") +
   stat_compare_means(label = "p.signif", method = "wilcox.test",
                      ref.group = ".all.", hide.ns = TRUE)  
@@ -1188,7 +1188,7 @@ pminplot <- ggplot(data = PminConc, aes(x = rootstock, y = Conc_pg.ul, fill = di
 PminConcplot <- pminplot + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
   theme(legend.position = "none") +
   labs(x = "Rootstock", 
-       y = pmlab) + scale_fill_viridis_d()  + 
+       y = pmlab) + scale_fill_viridis_d() + 
   stat_compare_means(method = "kruskal.test", label.y = 1500, label.x = "CASTEL 7605") +
   stat_compare_means(label = "p.signif", method = "wilcox.test",
                      ref.group = ".all.", hide.ns = TRUE)  
