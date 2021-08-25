@@ -1065,99 +1065,99 @@ The p-value of Kendall's test is 0.2833 . This is above 0.05, indicating that th
 ## Tables
 
 ```{r Tables 2 - 4 pch conc v hist class data kruskal groups, warning = FALSE, message = FALSE}
-#Diameter
-library(agricolae)
-library(dplyr)
-pch.diam.groups <- kruskal(PchConc$Conc_pg.ul,
-                           PchConc$diam.class, group = TRUE) %>%
-  .$groups %>%
-  as_tibble(rownames = "diameter class") %>%
-  rename("diam.groups" = "groups")
-pch.diam.groups <- dplyr::rename(pch.diam.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
-  #standard error
-  Pch.D.Error <- PchConc %>%
-    group_by(diam.class) %>%
-    summarise(Pch.D.Error = standard_error(Conc_pg.ul))
-Pch.D.Error <- dplyr::rename(Pch.D.Error, "diameter class" = "diam.class")
-Pch.D.Error$`diameter class`<- as.character(Pch.D.Error$`diameter class`)
-pch.diam.groups <- left_join(pch.diam.groups, Pch.D.Error, by = "diameter class")
-print(pch.diam.groups)
-#Density
-library(agricolae)
-pch.dens.groups <- kruskal(PchConc$Conc_pg.ul,
-                           PchConc$dens.class, group = TRUE) %>%
-  .$groups %>%
-  as_tibble(rownames = "density class") %>%
-  rename("des.groups" = "groups")
-pch.dens.groups <- dplyr::rename(pch.dens.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
-  #standard error
-    Pch.Dens.Error <- PchConc %>%
-      group_by(dens.class) %>%
-      summarise(Pch.Dens.Error = standard_error(Conc_pg.ul))
-Pch.Dens.Error <- dplyr::rename(Pch.Dens.Error, "density class" = "dens.class")
-Pch.Dens.Error$`density class`<- as.character(Pch.Dens.Error$`density class`)
-pch.dens.groups <- left_join(pch.dens.groups, Pch.Dens.Error, by = "density class")
-print(pch.dens.groups)
-#Surface
-library(agricolae)
-pch.surf.groups <- kruskal(PchConc$Conc_pg.ul,
-                           PchConc$surf.class, group = TRUE) %>%
-  .$groups %>%
-  as_tibble(rownames = "surface class") %>%
-  rename("surf.groups" = "groups")
-pch.surf.groups <- dplyr::rename(pch.surf.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
-  #standard error
-    Pch.S.Error <- PchConc %>%
-      group_by(surf.class) %>%
-      summarise(Pch.S.Error = standard_error(Conc_pg.ul))
-Pch.S.Error <- dplyr::rename(Pch.S.Error, "surface class" = "surf.class")
-Pch.S.Error$`surface class` <- as.character(Pch.S.Error$`surface class`)
-pch.surf.groups <- left_join(pch.surf.groups, Pch.S.Error, by = "surface class")
-
-print(pch.surf.groups)
+# #Diameter
+# library(agricolae)
+# library(dplyr)
+# pch.diam.groups <- kruskal(PchConc$Conc_pg.ul,
+#                            PchConc$diam.class, group = TRUE) %>%
+#   .$groups %>%
+#   as_tibble(rownames = "diameter class") %>%
+#   rename("diam.groups" = "groups")
+# pch.diam.groups <- dplyr::rename(pch.diam.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
+#   #standard error
+#   Pch.D.Error <- PchConc %>%
+#     group_by(diam.class) %>%
+#     summarise(Pch.D.Error = standard_error(Conc_pg.ul))
+# Pch.D.Error <- dplyr::rename(Pch.D.Error, "diameter class" = "diam.class")
+# Pch.D.Error$`diameter class`<- as.character(Pch.D.Error$`diameter class`)
+# pch.diam.groups <- left_join(pch.diam.groups, Pch.D.Error, by = "diameter class")
+# print(pch.diam.groups)
+# #Density
+# library(agricolae)
+# pch.dens.groups <- kruskal(PchConc$Conc_pg.ul,
+#                            PchConc$dens.class, group = TRUE) %>%
+#   .$groups %>%
+#   as_tibble(rownames = "density class") %>%
+#   rename("des.groups" = "groups")
+# pch.dens.groups <- dplyr::rename(pch.dens.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
+#   #standard error
+#     Pch.Dens.Error <- PchConc %>%
+#       group_by(dens.class) %>%
+#       summarise(Pch.Dens.Error = standard_error(Conc_pg.ul))
+# Pch.Dens.Error <- dplyr::rename(Pch.Dens.Error, "density class" = "dens.class")
+# Pch.Dens.Error$`density class`<- as.character(Pch.Dens.Error$`density class`)
+# pch.dens.groups <- left_join(pch.dens.groups, Pch.Dens.Error, by = "density class")
+# print(pch.dens.groups)
+# #Surface
+# library(agricolae)
+# pch.surf.groups <- kruskal(PchConc$Conc_pg.ul,
+#                            PchConc$surf.class, group = TRUE) %>%
+#   .$groups %>%
+#   as_tibble(rownames = "surface class") %>%
+#   rename("surf.groups" = "groups")
+# pch.surf.groups <- dplyr::rename(pch.surf.groups, Conc_pg.ul = "PchConc$Conc_pg.ul")
+#   #standard error
+#     Pch.S.Error <- PchConc %>%
+#       group_by(surf.class) %>%
+#       summarise(Pch.S.Error = standard_error(Conc_pg.ul))
+# Pch.S.Error <- dplyr::rename(Pch.S.Error, "surface class" = "surf.class")
+# Pch.S.Error$`surface class` <- as.character(Pch.S.Error$`surface class`)
+# pch.surf.groups <- left_join(pch.surf.groups, Pch.S.Error, by = "surface class")
+# 
+# print(pch.surf.groups)
 
 
 ```
 
 
 ```{r Tables 5 and 6 - pmin conc v hist class kruskal groups }
-#Diameter
-library(agricolae)
-pmin.diam.groups <- kruskal(PminConc$Conc_pg.ul,
-                           PminConc$diam.class, group = TRUE) %>%
-  .$groups %>%
-  as_tibble(rownames = "diameter class") %>%
-  rename("diam.groups" = "groups")
-pmin.diam.groups <- dplyr::rename(pmin.diam.groups, Conc_pg.ul = "PminConc$Conc_pg.ul")
-  #standard error
-  Pmin.D.Error <- PminConc %>%
-    group_by(diam.class) %>%
-    summarise(Pmin.D.Error = standard_error(Conc_pg.ul))
-Pmin.D.Error <- dplyr::rename(Pmin.D.Error, "diameter class" = "diam.class")
-Pmin.D.Error$`diameter class` <- as.character(Pmin.D.Error$`diameter class`)
-pmin.diam.groups <- left_join(pmin.diam.groups, Pmin.D.Error, by = "diameter class")
-print(pmin.diam.groups)
-
-#Density
-library(agricolae)
-pmin.dens.groups <- kruskal(PminConc$Conc_pg.ul,
-                           PminConc$dens.class, group = TRUE) %>%
-  .$groups %>%
-  as_tibble(rownames = "density class") %>%
-  rename("dens.class" = "groups")
-pmin.dens.groups <- dplyr::rename(pmin.dens.groups, Conc_pg.ul = "PminConc$Conc_pg.ul")
-  #standard error
-  Pmin.Dens.Error <- PminConc %>%
-    group_by(dens.class) %>%
-    summarise(Pmin.Dens.Error = standard_error(Conc_pg.ul))
-Pmin.Dens.Error <- dplyr::rename(Pmin.Dens.Error, "density class" = "dens.class")
-Pmin.Dens.Error$`density class` <- as.character(Pmin.Dens.Error$`density class`)
-pmin.dens.groups <- left_join(pmin.dens.groups, Pmin.Dens.Error, by = "density class")
-
-print(pmin.dens.groups)
-
-#Surface
-#Not significant, no groups
+# #Diameter
+# library(agricolae)
+# pmin.diam.groups <- kruskal(PminConc$Conc_pg.ul,
+#                            PminConc$diam.class, group = TRUE) %>%
+#   .$groups %>%
+#   as_tibble(rownames = "diameter class") %>%
+#   rename("diam.groups" = "groups")
+# pmin.diam.groups <- dplyr::rename(pmin.diam.groups, Conc_pg.ul = "PminConc$Conc_pg.ul")
+#   #standard error
+#   Pmin.D.Error <- PminConc %>%
+#     group_by(diam.class) %>%
+#     summarise(Pmin.D.Error = standard_error(Conc_pg.ul))
+# Pmin.D.Error <- dplyr::rename(Pmin.D.Error, "diameter class" = "diam.class")
+# Pmin.D.Error$`diameter class` <- as.character(Pmin.D.Error$`diameter class`)
+# pmin.diam.groups <- left_join(pmin.diam.groups, Pmin.D.Error, by = "diameter class")
+# print(pmin.diam.groups)
+# 
+# #Density
+# library(agricolae)
+# pmin.dens.groups <- kruskal(PminConc$Conc_pg.ul,
+#                            PminConc$dens.class, group = TRUE) %>%
+#   .$groups %>%
+#   as_tibble(rownames = "density class") %>%
+#   rename("dens.class" = "groups")
+# pmin.dens.groups <- dplyr::rename(pmin.dens.groups, Conc_pg.ul = "PminConc$Conc_pg.ul")
+#   #standard error
+#   Pmin.Dens.Error <- PminConc %>%
+#     group_by(dens.class) %>%
+#     summarise(Pmin.Dens.Error = standard_error(Conc_pg.ul))
+# Pmin.Dens.Error <- dplyr::rename(Pmin.Dens.Error, "density class" = "dens.class")
+# Pmin.Dens.Error$`density class` <- as.character(Pmin.Dens.Error$`density class`)
+# pmin.dens.groups <- left_join(pmin.dens.groups, Pmin.Dens.Error, by = "density class")
+# 
+# print(pmin.dens.groups)
+# 
+# #Surface
+# #Not significant, no groups
 ```
 
 ## Figure 1 - DNA concentrations by Rootstocks
@@ -1169,7 +1169,7 @@ library(ggpubr)
 plab <- expression(~italic("Pa. chlamydospora")~ "DNA concentration (pg*μL"^-1*")")
 ptit <- expression(~italic("Pa. chlamydospora")~ "DNA Concentration by Rootstock")
 x <- ggplot(data = PchConc, aes(x = rootstock, y = Conc_pg.ul)) 
-PchConcplot <- x + geom_boxplot(aes(colour = "gray")) + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + theme(legend.position = "none") + labs(x = "Rootstock", 
+PchConcplot <- x + geom_boxplot(color = "gray") + theme_classic() + theme(axis.text.x = element_text(size = 6, angle=90, hjust = 0.5), axis.title = element_text(size=8), axis.text = element_text(size = 8)) + theme(legend.position = "none") + labs(x = "Rootstock", 
        y = plab) +
   stat_compare_means(method = "kruskal.test", label.y = 500, label.x = "RICHTER 31") +
   stat_compare_means(label = "p.signif", method = "wilcox.test",
@@ -1177,11 +1177,10 @@ PchConcplot <- x + geom_boxplot(aes(colour = "gray")) + theme_classic() + theme(
 PchConcplot
 
 library(ggpubr)
-Fig.1leg <- as_ggplot(leg.diam)
+
 ggsave(filename = "Fig.1A.png", plot = PchConcplot, device = "png", height = 5, width = 8,
        units = "in", dpi = 500)
-ggsave(filename = "Fig.1leg.png", plot = Fig.1leg, device = "png", height = 3, width = 4,
-       units = "in", dpi = 500)
+
 
 ```
 
@@ -1190,11 +1189,11 @@ ggsave(filename = "Fig.1leg.png", plot = Fig.1leg, device = "png", height = 3, w
 library(ggplot2)
 pmlab <- expression(~italic("Pm. minimum")~ "DNA concentration (pg*μL"^-1*")")
 ptit <- expression(~italic("Pm. minimum")~ "DNA Concentration by Rootstock")
-pminplot <- ggplot(data = PminConc, aes(x = rootstock, y = Conc_pg.ul)) + geom_boxplot()
+pminplot <- ggplot(data = PminConc, aes(x = rootstock, y = Conc_pg.ul)) + geom_boxplot(color = "gray")
 PminConcplot <- pminplot + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
   theme(legend.position = "none") +
   labs(x = "Rootstock", 
-       y = pmlab)
+       y = pmlab) +
   stat_compare_means(method = "kruskal.test", label.y = 1500, label.x = "CASTEL 7605") +
   stat_compare_means(label = "p.signif", method = "wilcox.test",
                      ref.group = ".all.", hide.ns = TRUE)  
@@ -1222,7 +1221,7 @@ DiamR <- ggplot(data = hist.charact, aes( x = rootstock, y = diameter, fill = pa
 #DiamRplot is run twice to first extract the legend then get the graph without the legend (yes they could just be named differently, yes they could be simplified)
 DiamRplot <- DiamR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
    labs(x = "Rootstock variety", y = "Xylem Vessel Diameter (μm)") +
-   scale_colour_grey(name = "Parent Cross") + 
+   scale_fill_grey() + 
    stat_compare_means(method = "kruskal.test", label.y = 20, label.x = "RICHTER 31") +
    stat_compare_means(label = "p.signif", method = "wilcox.test",
                       ref.group = ".all.", hide.ns = TRUE)   
@@ -1231,7 +1230,7 @@ leg.parent <- get_legend(DiamRplot)
 DiamRplot <- DiamR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
   theme(legend.position = "none") +
   labs(x = "Rootstock variety", y = "Xylem Vessel Diameter (μm)") + 
-  scale_colour_grey() + 
+   scale_fill_grey() + 
   stat_compare_means(method = "kruskal.test", label.y = 20, label.x = "RICHTER 31") +
   stat_compare_means(label = "p.signif", method = "wilcox.test",
                      ref.group = ".all.", hide.ns = TRUE)   
@@ -1239,14 +1238,14 @@ DiamRplot <- DiamR + theme_classic() + theme(axis.text.x = element_text(angle=90
 DensR <- ggplot(data = hist.charact, aes( x = rootstock, y = density, fill = parents)) + 
   geom_boxplot() 
 DensRplot <- DensR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
-  theme(legend.position = "none") + labs(x = "Rootstock variety", y = denslab) +  scale_colour_grey() +  stat_compare_means(method = "anova", label.y = 100, label.x = "COUDERC 1202") +
+  theme(legend.position = "none") + labs(x = "Rootstock variety", y = denslab) + scale_fill_grey() +  stat_compare_means(method = "anova", label.y = 100, label.x = "COUDERC 1202") +
   stat_compare_means(label = "p.signif", method = "t.test",
                      ref.group = ".all.", hide.ns = TRUE)   
 
 SurfR <- ggplot(data = hist.charact, aes( x = rootstock, y = surface, fill = parents)) + 
   geom_boxplot() 
 SurfRplot <- SurfR + theme_classic() + theme(axis.text.x = element_text(angle=90, hjust = 1)) +
-  theme(legend.position = "none") + labs(x = "Rootstock variety", y = surflab) +  scale_colour_grey() +  
+  theme(legend.position = "none") + labs(x = "Rootstock variety", y = surflab) + scale_fill_grey() +  
   stat_compare_means(method = "kruskal.test", label.y = 0.3, label.x = "BLANCHARD 1") +
   stat_compare_means(label = "p.signif", method = "wilcox.test",
                      ref.group = ".all.", hide.ns = TRUE)  
@@ -1361,11 +1360,11 @@ pmlab <- expression(~italic("Pm. minimum")~ "DNA concentration (pg*μL"^-1*")")
 ptit <- expression(~italic("Pm. minimum")~ "DNA Concentration by Rootstock")
 
 Pch.diam <- ggplot(PchConc, aes(x = diam.class, y = Conc_pg.ul, fill = diam.class)) + geom_boxplot() +
-  labs(x = "Diameter class", y = plab) + scale_fill_viridis_d() + theme_classic() +
+  labs(x = "Diameter class", y = plab) + scale_fill_viridis_d(name = "Diameter Class") + theme_classic() +
   stat_compare_means(method = "kruskal.test", label.y = 450, label.x = 1) +
   stat_compare_means(label = "p.signif", method = "wilcox.test",
                      ref.group = ".all.", hide.ns = TRUE)  
-
+leg.diam <- get_legend(Pch.diam)
 Pmin.diam <- ggplot(PminConc, aes(x = diam.class, y = Conc_pg.ul, fill = diam.class)) + geom_boxplot() +
   labs(x = "Diameter class", y = pmlab) + scale_fill_viridis_d() + theme_classic() +
   stat_compare_means(method = "kruskal.test", label.y = 1000, label.x = 1) +
